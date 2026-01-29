@@ -26,7 +26,7 @@ repositories {
 }
 
 val bouncycastleVersion = "1.82"
-val jsr310Version = "2.17.1"
+val jacksonVersion = "2.17.1"
 val junitVersion = "4.4"
 val junitEngineVersion = "5.8.2"
 val jsxbVarsion = "4.0.6"
@@ -46,7 +46,12 @@ dependencies {
     api("eu.europa.ec.joinup.sd-dss:dss-utils-apache-commons:$xadesVersion")
 
     api("org.apache.commons:commons-lang3:$commonsLangsVersion")
-    api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jsr310Version")
+    
+    // Jackson for JSON - explicitly declare all Jackson dependencies
+    api("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+    api("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
+    api("com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion")
+    api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
 
     // Apache HttpClient for Java 8 compatibility
     api("org.apache.httpcomponents:httpclient:$apacheHttpClientVersion")

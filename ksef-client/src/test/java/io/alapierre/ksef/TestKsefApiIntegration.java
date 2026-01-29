@@ -83,7 +83,7 @@ public class TestKsefApiIntegration {
                     e.getClass().getSimpleName() + ": " + e.getMessage());
                 System.out.println("Test skipped due to network unavailability");
                 // Don't fail the test if network is unavailable
-                org.junit.Assume.assumeTrue("KSeF API not reachable", false);
+                org.junit.Assume.assumeTrue(false);
             }
         }
     }
