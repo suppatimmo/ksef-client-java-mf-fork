@@ -58,14 +58,14 @@ mvn clean compile
 # Run tests
 mvn test
 
-# Build JAR packages (main, sources, and javadoc)
-mvn clean package
-
-# Skip tests during packaging
+# Build main JAR only
 mvn clean package -DskipTests
+
+# Build with sources, javadoc, and signing (release profile)
+mvn clean package -Prelease -DskipTests
 ```
 
-After building, you'll find the following JAR files in `ksef-client/target/`:
+After building with the release profile, you'll find the following JAR files in `ksef-client/target/`:
 - `ksef-client-VERSION.jar` - Main library JAR
 - `ksef-client-VERSION-sources.jar` - Sources JAR
 - `ksef-client-VERSION-javadoc.jar` - Javadoc JAR
@@ -86,7 +86,7 @@ To build the project using the original Gradle build:
 
 ## Some useful utilities
 
-- `io.alapierre.ksef.batch.BatchHelper` - a utility class for preparing and sanding batches of invoices without going to OutOfMemory Exceptions
+- `io.alapierre.ksef.batch.BatchHelper` - a utility class for preparing and sending batches of invoices without going to OutOfMemory Exceptions
 - `io.alapierre.ksef.qr.VerificationLinkGenerator` - working version of the QR code link generator from the official SDK
 
 The current release fixes the original [DefaultVerificationLinkService.java](ksef-client/src/main/java/pl/akmf/ksef/sdk/api/services/DefaultVerificationLinkService.java) to work properly with certs issued by Aplikacja Podatnika and MCU.
