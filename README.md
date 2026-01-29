@@ -43,6 +43,47 @@ The intent is to support the developer community until the official SDK regains 
 | Maintenance           | Irregular / no updates | Community maintained                        |
 | Build system          | Unmodified             | Cleaned up and improved for reproducibility |
 
+## 📦 Building the Project
+
+This project now supports both **Gradle** and **Maven** build systems.
+
+### Building with Maven
+
+To build the project using Maven:
+
+```bash
+# Clean and compile
+mvn clean compile
+
+# Run tests
+mvn test
+
+# Build JAR packages (main, sources, and javadoc)
+mvn clean package
+
+# Skip tests during packaging
+mvn clean package -DskipTests
+```
+
+After building, you'll find the following JAR files in `ksef-client/target/`:
+- `ksef-client-VERSION.jar` - Main library JAR
+- `ksef-client-VERSION-sources.jar` - Sources JAR
+- `ksef-client-VERSION-javadoc.jar` - Javadoc JAR
+
+### Building with Gradle
+
+To build the project using the original Gradle build:
+
+```bash
+# Build with Gradle
+./gradlew build
+
+# Run tests
+./gradlew test
+```
+
+**Note**: The JAXB-generated code is already checked into the repository at `ksef-client/src/main/java/pl/akmf/ksef/sdk/client/model/xml/`. The Maven build uses this pre-generated code. If you need to regenerate from XSD schemas, uncomment the jaxb2-maven-plugin in `ksef-client/pom.xml`.
+
 ## Some useful utilities
 
 - `io.alapierre.ksef.batch.BatchHelper` - a utility class for preparing and sanding batches of invoices without going to OutOfMemory Exceptions
