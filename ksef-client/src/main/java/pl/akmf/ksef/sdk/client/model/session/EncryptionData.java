@@ -48,7 +48,7 @@ public class EncryptionData {
     public boolean equals(Object obj) {
         if (obj == this) return true;
         if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (EncryptionData) obj;
+        EncryptionData that = (EncryptionData) obj;
         return Objects.equals(this.cipherKey, that.cipherKey) &&
                 Objects.equals(this.cipherIv, that.cipherIv) &&
                 Objects.equals(this.encryptedCipherKey, that.encryptedCipherKey) &&

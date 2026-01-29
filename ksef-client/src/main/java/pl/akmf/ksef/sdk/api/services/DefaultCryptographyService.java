@@ -470,7 +470,7 @@ public class DefaultCryptographyService implements CryptographyService {
             }
             PKCS8EncryptedPrivateKeyInfo encryptedKeyPair = (PKCS8EncryptedPrivateKeyInfo) object;
 
-            var decryptorProvider = new JcePKCSPBEInputDecryptorProviderBuilder()
+            InputDecryptorProvider decryptorProvider = new JcePKCSPBEInputDecryptorProviderBuilder()
                     .setProvider(BC)
                     .build(password);
 

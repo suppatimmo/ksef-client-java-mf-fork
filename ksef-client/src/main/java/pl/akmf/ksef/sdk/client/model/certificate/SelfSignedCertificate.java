@@ -26,7 +26,7 @@ public class SelfSignedCertificate {
     public boolean equals(Object obj) {
         if (obj == this) return true;
         if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (SelfSignedCertificate) obj;
+        SelfSignedCertificate that = (SelfSignedCertificate) obj;
         return Objects.equals(this.certificate, that.certificate) &&
                 Objects.equals(this.keyPair, that.keyPair);
     }

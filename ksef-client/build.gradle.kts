@@ -9,7 +9,7 @@ version = rootProject.version
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(8)
     }
     withSourcesJar()
     withJavadocJar()
@@ -77,7 +77,7 @@ tasks.withType<Test> {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release.set(21)
+    options.release.set(8)
     options.encoding = "UTF-8"
 }
 

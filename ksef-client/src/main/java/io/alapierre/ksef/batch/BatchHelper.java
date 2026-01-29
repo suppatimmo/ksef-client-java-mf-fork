@@ -161,7 +161,7 @@ public class BatchHelper {
                                               FormCode formCode) throws ApiException {
 
         val batchRequest = prepareRequest(result, formCode);
-        var session = client.openBatchSession(batchRequest, UpoVersion.UPO_4_3, authToken);
+        OpenBatchSessionResponse session = client.openBatchSession(batchRequest, UpoVersion.UPO_4_3, authToken);
 
         List<PackagePartSignatureInitResponseType> uploadInstructions = session.getPartUploadRequests();
         List<String> errors = new ArrayList<>();
@@ -205,7 +205,7 @@ public class BatchHelper {
     private OpenBatchSessionRequest prepareRequest(BatchResult batchResult,
                                                    FormCode formCode) {
 
-        var builder = OpenBatchSessionRequestBuilder.create()
+        OpenBatchSessionRequestBuilder builder = OpenBatchSessionRequestBuilder.create()
                     .withFormCode(formCode.getSystemCode(), formCode.getSchemaVersion(), formCode.getValue())
                     .withOfflineMode(false)
                     .withBatchFile(batchResult.zipSize(), batchResult.zipHash())
@@ -237,7 +237,23 @@ public class BatchHelper {
         }
     }
 
-    protected record ZipContext(File file, List<InvoiceHash> hashes) {}
+    protected static class ZipContext {
+        private final File file;
+        private final List<InvoiceHash> hashes;
+
+        ZipContext(File file, List<InvoiceHash> hashes) {
+            this.file = file;
+            this.hashes = hashes;
+        }
+
+        File file() {
+            return file;
+        }
+
+        List<InvoiceHash> hashes() {
+            return hashes;
+        }
+    }
 
     protected ZipContext createZipWithHashes(InvoiceSource source) {
         File zip;

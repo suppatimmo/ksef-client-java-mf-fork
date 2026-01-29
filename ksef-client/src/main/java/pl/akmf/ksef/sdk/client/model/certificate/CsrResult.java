@@ -24,7 +24,7 @@ public class CsrResult {
     public boolean equals(Object obj) {
         if (obj == this) return true;
         if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (CsrResult) obj;
+        CsrResult that = (CsrResult) obj;
         return Arrays.equals(this.csr, that.csr) &&
                 Arrays.equals(this.privateKey, that.privateKey);
     }

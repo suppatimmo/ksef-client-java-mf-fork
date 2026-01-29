@@ -30,7 +30,6 @@ import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PSSParameterSpec;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.HexFormat;
 
 
 /**
@@ -83,13 +82,21 @@ public final class CryptoUtils {
     }
 
     public static String extractCertSerial(X509Certificate cert) {
-        var bytes = cert.getSerialNumber().toByteArray();
+        byte[] bytes = cert.getSerialNumber().toByteArray();
 
         if (bytes.length > 1 && bytes[0] == 0) {
             bytes = Arrays.copyOfRange(bytes, 1, bytes.length);
         }
 
-        return HexFormat.of().formatHex(bytes).toUpperCase();
+        return bytesToHex(bytes).toUpperCase();
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 
     public static X509Certificate loadCertificate(InputStream source) throws CertificateException {
@@ -113,31 +120,35 @@ public final class CryptoUtils {
 
             JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider(BC);
 
-            return switch (obj) {
-                case PKCS8EncryptedPrivateKeyInfo encPkcs8 -> {
-                    requirePassword(password, "PKCS#8 encrypted private key");
-                    InputDecryptorProvider decryptor =
-                            new JceOpenSSLPKCS8DecryptorProviderBuilder()
-                                    .setProvider(BC)
-                                    .build(password);
-                    PrivateKeyInfo pkInfo = encPkcs8.decryptPrivateKeyInfo(decryptor);
-                    yield converter.getPrivateKey(pkInfo);
-                }
-                case PEMEncryptedKeyPair encKeyPair -> {
-                    requirePassword(password, "PEM encrypted key pair");
-                    var decProv =
-                            new JcePEMDecryptorProviderBuilder()
-                                    .setProvider(BC)
-                                    .build(password);
-                    PEMKeyPair keyPair = encKeyPair.decryptKeyPair(decProv);
-                    yield converter.getKeyPair(keyPair).getPrivate();
-                }
-                case PEMKeyPair keyPair -> converter.getKeyPair(keyPair).getPrivate();
-                case PrivateKeyInfo pkInfo -> converter.getPrivateKey(pkInfo);
-                default -> throw new IllegalArgumentException(
+            if (obj instanceof PKCS8EncryptedPrivateKeyInfo) {
+                PKCS8EncryptedPrivateKeyInfo encPkcs8 = (PKCS8EncryptedPrivateKeyInfo) obj;
+                requirePassword(password, "PKCS#8 encrypted private key");
+                InputDecryptorProvider decryptor =
+                        new JceOpenSSLPKCS8DecryptorProviderBuilder()
+                                .setProvider(BC)
+                                .build(password);
+                PrivateKeyInfo pkInfo = encPkcs8.decryptPrivateKeyInfo(decryptor);
+                return converter.getPrivateKey(pkInfo);
+            } else if (obj instanceof PEMEncryptedKeyPair) {
+                PEMEncryptedKeyPair encKeyPair = (PEMEncryptedKeyPair) obj;
+                requirePassword(password, "PEM encrypted key pair");
+                InputDecryptorProvider decProv =
+                        new JcePEMDecryptorProviderBuilder()
+                                .setProvider(BC)
+                                .build(password);
+                PEMKeyPair keyPair = encKeyPair.decryptKeyPair(decProv);
+                return converter.getKeyPair(keyPair).getPrivate();
+            } else if (obj instanceof PEMKeyPair) {
+                PEMKeyPair keyPair = (PEMKeyPair) obj;
+                return converter.getKeyPair(keyPair).getPrivate();
+            } else if (obj instanceof PrivateKeyInfo) {
+                PrivateKeyInfo pkInfo = (PrivateKeyInfo) obj;
+                return converter.getPrivateKey(pkInfo);
+            } else {
+                throw new IllegalArgumentException(
                         "Unsupported key format: " + obj.getClass().getName()
                 );
-            };
+            }
         } catch (OperatorCreationException | PKCSException e) {
             throw new VerificationLinkSiningException(e);
         }
