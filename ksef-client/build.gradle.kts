@@ -37,6 +37,7 @@ val googleZxingCodeVersion = "3.5.3"
 val googleZxingJavaseVersion = "3.5.3"
 val lombokVersion = "1.18.42"
 val commonsLangsVersion = "3.18.0"
+val apacheHttpClientVersion = "4.5.14"
 
 dependencies {
     // Validation
@@ -47,6 +48,9 @@ dependencies {
     api("org.apache.commons:commons-lang3:$commonsLangsVersion")
     api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jsr310Version")
 
+    // Apache HttpClient for Java 8 compatibility
+    api("org.apache.httpcomponents:httpclient:$apacheHttpClientVersion")
+
     testImplementation("junit:junit:$junitVersion")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:$junitEngineVersion")
 
@@ -56,8 +60,8 @@ dependencies {
     xjc("com.sun.xml.bind:jaxb-impl:$jsxbVarsion")
 
     //bouncycastle
-    api("org.bouncycastle:bcpkix-jdk18on:$bouncycastleVersion")
-    api("org.bouncycastle:bcprov-jdk18on:$bouncycastleVersion")
+    api("org.bouncycastle:bcpkix-jdk15to18:$bouncycastleVersion")
+    api("org.bouncycastle:bcprov-jdk15to18:$bouncycastleVersion")
 
     //qr code
     api("com.google.zxing:core:$googleZxingCodeVersion")
@@ -77,7 +81,8 @@ tasks.withType<Test> {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release.set(8)
+    sourceCompatibility = "1.8"
+    targetCompatibility = "1.8"
     options.encoding = "UTF-8"
 }
 

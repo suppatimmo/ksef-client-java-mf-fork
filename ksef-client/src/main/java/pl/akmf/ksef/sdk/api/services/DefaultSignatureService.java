@@ -43,8 +43,19 @@ public class DefaultSignatureService implements SignatureService {
 
         DSSDocument signedDocument = service.signDocument(toSignDocument, parameters, signatureValue);
         try (ByteArrayInputStream byteArrayInputStream = (ByteArrayInputStream) signedDocument.openStream()) {
-            return new String(byteArrayInputStream.readAllBytes(), StandardCharsets.UTF_8);
+            byte[] bytes = readAllBytes(byteArrayInputStream);
+            return new String(bytes, StandardCharsets.UTF_8);
         }
+    }
+
+    private byte[] readAllBytes(ByteArrayInputStream in) throws IOException {
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+        while ((bytesRead = in.read(buffer)) != -1) {
+            output.write(buffer, 0, bytesRead);
+        }
+        return output.toByteArray();
     }
 
     private XAdESSignatureParameters prepareParameters(X509Certificate x509Certificate, PrivateKey privateKey) {

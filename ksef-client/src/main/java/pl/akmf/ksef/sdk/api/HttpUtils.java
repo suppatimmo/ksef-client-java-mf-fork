@@ -1,9 +1,9 @@
 package pl.akmf.ksef.sdk.api;
 
 import org.apache.commons.lang3.StringUtils;
+import pl.akmf.ksef.sdk.api.http.HttpHeadersWrapper;
 
 import java.net.URLEncoder;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -66,9 +66,9 @@ public class HttpUtils {
         return url.toString();
     }
 
-    public static boolean isValidResponse(HttpResponse<byte[]> response,
+    public static boolean isValidResponse(int statusCode,
                                           HttpStatus expectedStatus) {
-        return expectedStatus.getCode() == response.statusCode();
+        return expectedStatus.getCode() == statusCode;
     }
 
     public static String formatExceptionMessage(String operationId, int statusCode, byte[] body) {

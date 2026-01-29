@@ -157,13 +157,13 @@ public class BatchHelperTest {
 
     protected String auth(String t, String n) throws Exception {
 
-        var challenge = ksefClient.getAuthChallenge();
+        AuthenticationChallengeResponse challenge = ksefClient.getAuthChallenge();
 
-        var token = cryptographyService.encryptKsefTokenWithRSAUsingPublicKey(
+        byte[] token = cryptographyService.encryptKsefTokenWithRSAUsingPublicKey(
                 t,
                 challenge.getTimestamp());
 
-        var a = ksefClient.authenticateByKSeFToken(
+        AuthenticationInitResponse a = ksefClient.authenticateByKSeFToken(
                 new AuthKsefTokenRequestBuilder()
                         .withChallenge(challenge.getChallenge())
                         .withContextIdentifier(new ContextIdentifier(ContextIdentifier.IdentifierType.NIP, n))

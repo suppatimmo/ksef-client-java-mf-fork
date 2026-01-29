@@ -45,11 +45,18 @@ import pl.akmf.ksef.sdk.system.SystemKSeFSDKException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
+
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.*;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.entity.InputStreamEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.util.EntityUtils;
+import org.apache.http.HttpResponse;
+import pl.akmf.ksef.sdk.api.http.HttpHeadersWrapper;
 
 import static pl.akmf.ksef.sdk.api.HttpStatus.*;
 import static pl.akmf.ksef.sdk.api.HttpUtils.*;
@@ -65,20 +72,20 @@ public class DefaultKsefClient implements KSeFClient {
     private static final String DELETE = "DELETE";
     private final ObjectMapper objectMapper;
 
-    private final HttpClient apiClient;
+    private final CloseableHttpClient apiClient;
     private final String baseURl;
     private final String suffixURl;
     private final Duration timeout;
     private final Map<String, String> defaultHeaders;
 
-    public DefaultKsefClient(HttpClient httpClient, KsefApiProperties ksefApiProperties) {
+    public DefaultKsefClient(CloseableHttpClient httpClient, KsefApiProperties ksefApiProperties) {
         this(httpClient, ksefApiProperties, new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false));
     }
 
-    public DefaultKsefClient(HttpClient httpClient, KsefApiProperties ksefApiProperties, ObjectMapper objectMapper) {
+    public DefaultKsefClient(CloseableHttpClient httpClient, KsefApiProperties ksefApiProperties, ObjectMapper objectMapper) {
         this.apiClient = httpClient;
         this.defaultHeaders = ksefApiProperties.getDefaultHeaders();
         this.timeout = ksefApiProperties.getRequestTimeout();
@@ -102,7 +109,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(GRANT_AUTHORIZED_SUBJECT_PERMISSION.getUrl(), entityAuthorizationPermissionsGrantRequest, headers);
+        HttpResponseData response = post(GRANT_AUTHORIZED_SUBJECT_PERMISSION.getUrl(), entityAuthorizationPermissionsGrantRequest, headers);
 
         return getResponse(response, ACCEPTED, GRANT_AUTHORIZED_SUBJECT_PERMISSION, OperationResponse.class);
     }
@@ -122,7 +129,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(GRANT_INDIRECT_PERMISSION.getUrl(), grantIndirectEntityPermissionsRequest, headers);
+        HttpResponseData response = post(GRANT_INDIRECT_PERMISSION.getUrl(), grantIndirectEntityPermissionsRequest, headers);
 
         return getResponse(response, ACCEPTED, GRANT_INDIRECT_PERMISSION, OperationResponse.class);
     }
@@ -145,7 +152,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(ACCEPT, APPLICATION_JSON);
         headers.put(X_KSEF_FEATURE, upoVersion.value());
 
-        HttpResponse<byte[]> response = post(BATCH_SESSION_OPEN.getUrl(), openBatchSessionRequest, headers);
+        HttpResponseData response = post(BATCH_SESSION_OPEN.getUrl(), openBatchSessionRequest, headers);
 
         return getResponse(response, CREATED, BATCH_SESSION_OPEN, OpenBatchSessionResponse.class);
     }
@@ -170,7 +177,7 @@ public class DefaultKsefClient implements KSeFClient {
         Map<String, String> headers = new HashMap<>();
         headers.put(AUTHORIZATION, BEARER + accessToken);
 
-        HttpResponse<byte[]> response = post(uri, null, headers);
+        HttpResponseData response = post(uri, null, headers);
 
         validResponse(response, NO_CONTENT, BATCH_SESSION_OPEN);
     }
@@ -254,7 +261,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(ACCEPT, APPLICATION_JSON);
         headers.put(X_KSEF_FEATURE, upoVersion.value());
 
-        HttpResponse<byte[]> response = post(SESSION_OPEN.getUrl(), openOnlineSessionRequest, headers);
+        HttpResponseData response = post(SESSION_OPEN.getUrl(), openOnlineSessionRequest, headers);
 
         return getResponse(response, CREATED, SESSION_OPEN, OpenOnlineSessionResponse.class);
     }
@@ -279,7 +286,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(uri, null, headers);
+        HttpResponseData response = post(uri, null, headers);
 
         validResponse(response, NO_CONTENT, SESSION_CLOSE);
     }
@@ -307,7 +314,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(uri, sendInvoiceOnlineSessionRequest, headers);
+        HttpResponseData response = post(uri, sendInvoiceOnlineSessionRequest, headers);
 
         return getResponse(response, ACCEPTED, SESSION_INVOICE_SEND, SendInvoiceResponse.class);
     }
@@ -325,7 +332,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(CERTIFICATE_LIMIT.getUrl(), headers);
+        HttpResponseData response = get(CERTIFICATE_LIMIT.getUrl(), headers);
 
         return getResponse(response, OK, CERTIFICATE_LIMIT, CertificateLimitsResponse.class);
     }
@@ -343,7 +350,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(CERTIFICATE_ENROLLMENT_DATA.getUrl(), headers);
+        HttpResponseData response = get(CERTIFICATE_ENROLLMENT_DATA.getUrl(), headers);
 
         return getResponse(response, OK, CERTIFICATE_ENROLLMENT_DATA, CertificateEnrollmentsInfoResponse.class);
     }
@@ -364,7 +371,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(CERTIFICATE_ENROLLMENT.getUrl(), enrollCertificateRequest, headers);
+        HttpResponseData response = post(CERTIFICATE_ENROLLMENT.getUrl(), enrollCertificateRequest, headers);
 
         return getResponse(response, ACCEPTED, CERTIFICATE_ENROLLMENT, CertificateEnrollmentResponse.class);
     }
@@ -386,7 +393,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, CERTIFICATE_STATUS, CertificateEnrollmentStatusResponse.class);
     }
@@ -406,7 +413,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(CERTIFICATE_RETRIEVE.getUrl(), certificateListRequest, headers);
+        HttpResponseData response = post(CERTIFICATE_RETRIEVE.getUrl(), certificateListRequest, headers);
 
         return getResponse(response, OK, CERTIFICATE_RETRIEVE, CertificateListResponse.class);
     }
@@ -432,7 +439,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(uri, certificateRevokeRequest, headers);
+        HttpResponseData response = post(uri, certificateRevokeRequest, headers);
         validResponse(response, NO_CONTENT, CERTIFICATE_REVOKE);
     }
 
@@ -459,7 +466,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(uri, queryCertificatesRequest, headers);
+        HttpResponseData response = post(uri, queryCertificatesRequest, headers);
 
         return getResponse(response, OK, CERTIFICATE_METADATA, CertificateMetadataListResponse.class);
     }
@@ -474,7 +481,7 @@ public class DefaultKsefClient implements KSeFClient {
     public AuthenticationChallengeResponse getAuthChallenge() throws ApiException {
         Map<String, String> headers = new HashMap<>();
 
-        HttpResponse<byte[]> response = post(AUTH_CHALLENGE.getUrl(), null, headers);
+        HttpResponseData response = post(AUTH_CHALLENGE.getUrl(), null, headers);
 
         return getResponse(response, OK, AUTH_CHALLENGE, AuthenticationChallengeResponse.class);
     }
@@ -500,7 +507,7 @@ public class DefaultKsefClient implements KSeFClient {
         Map<String, String> headers = new HashMap<>();
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(uri, signedXml, headers);
+        HttpResponseData response = post(uri, signedXml, headers);
 
         return getResponse(response, ACCEPTED, AUTH_TOKEN_SIGNATURE, SignatureResponse.class);
     }
@@ -519,7 +526,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(AUTH_KSEF_TOKEN.getUrl(), body, headers);
+        HttpResponseData response = post(AUTH_KSEF_TOKEN.getUrl(), body, headers);
 
         return getResponse(response, ACCEPTED, AUTH_KSEF_TOKEN, SignatureResponse.class);
     }
@@ -545,7 +552,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + authenticationToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, AUTH_TOKEN_STATUS, AuthStatus.class);
     }
@@ -563,7 +570,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + authenticationToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(AUTH_TOKEN_REEDEM.getUrl(), null, headers);
+        HttpResponseData response = post(AUTH_TOKEN_REEDEM.getUrl(), null, headers);
 
         return getResponse(response, OK, AUTH_TOKEN_REEDEM, AuthOperationStatusResponse.class);
     }
@@ -580,7 +587,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + refreshToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(JWT_TOKEN_REFRESH.getUrl(), null, headers);
+        HttpResponseData response = post(JWT_TOKEN_REFRESH.getUrl(), null, headers);
 
         return getResponse(response, OK, JWT_TOKEN_REFRESH, AuthenticationTokenRefreshResponse.class);
     }
@@ -597,7 +604,7 @@ public class DefaultKsefClient implements KSeFClient {
         Map<String, String> headers = new HashMap<>();
         headers.put(AUTHORIZATION, BEARER + accessToken);
 
-        HttpResponse<byte[]> response = post(JWT_TOKEN_REVOKE.getUrl(), null, headers);
+        HttpResponseData response = post(JWT_TOKEN_REVOKE.getUrl(), null, headers);
 
         validResponse(response, OK, JWT_TOKEN_REVOKE);
     }
@@ -618,7 +625,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, PERMISSION_STATUS, PermissionStatusInfo.class);
     }
@@ -645,7 +652,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(uri, personPermissionsQueryRequest, headers);
+        HttpResponseData response = post(uri, personPermissionsQueryRequest, headers);
 
         return getResponse(response, OK, PERMISSION_SEARCH_PERSON_PERMISSION, QueryPersonPermissionsResponse.class);
     }
@@ -672,7 +679,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(uri, subunitPermissionsQueryRequest, headers);
+        HttpResponseData response = post(uri, subunitPermissionsQueryRequest, headers);
 
         return getResponse(response, OK, PERMISSION_SEARCH_SUBUNIT_GRANT, QuerySubunitPermissionsResponse.class);
     }
@@ -699,7 +706,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(uri, request, headers);
+        HttpResponseData response = post(uri, request, headers);
 
         return getResponse(response, OK, PERMISSION_SEARCH_PERSONAL_GRANTS, QueryPersonalGrantResponse.class);
     }
@@ -723,7 +730,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, PERMISSION_SEARCH_ENTITY_ROLES, QueryEntityRolesResponse.class);
     }
@@ -750,7 +757,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(uri, subordinateEntityRolesQueryRequest, headers);
+        HttpResponseData response = post(uri, subordinateEntityRolesQueryRequest, headers);
 
         return getResponse(response, OK, PERMISSION_SEARCH_SUBORDINATE_PERMISSION, SubordinateEntityRolesQueryResponse.class);
     }
@@ -777,7 +784,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(uri, entityAuthorizationPermissionsQueryRequest, headers);
+        HttpResponseData response = post(uri, entityAuthorizationPermissionsQueryRequest, headers);
 
         return getResponse(response, OK, PERMISSION_SEARCH_AUTHORIZATIONS_GRANT, QueryEntityAuthorizationPermissionsResponse.class);
     }
@@ -804,7 +811,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(uri, euEntityPermissionsQueryRequest, headers);
+        HttpResponseData response = post(uri, euEntityPermissionsQueryRequest, headers);
 
         return getResponse(response, OK, PERMISSION_SEARCH_EU_ENTITY_GRANT, QueryEuEntityPermissionsResponse.class);
     }
@@ -823,7 +830,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(GRANT_EU_ADMINISTRATOR_PERMISSION.getUrl(), euEntityPermissionsGrantRequest, headers);
+        HttpResponseData response = post(GRANT_EU_ADMINISTRATOR_PERMISSION.getUrl(), euEntityPermissionsGrantRequest, headers);
 
         return getResponse(response, ACCEPTED, GRANT_EU_ADMINISTRATOR_PERMISSION, OperationResponse.class);
     }
@@ -843,7 +850,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(GRANT_EU_REPRESENTATIVE.getUrl(), grantEUEntityRepresentativePermissionsRequest, headers);
+        HttpResponseData response = post(GRANT_EU_REPRESENTATIVE.getUrl(), grantEUEntityRepresentativePermissionsRequest, headers);
 
         return getResponse(response, ACCEPTED, GRANT_EU_REPRESENTATIVE, OperationResponse.class);
     }
@@ -864,14 +871,14 @@ public class DefaultKsefClient implements KSeFClient {
         Map<String, String> headers = new HashMap<>();
         headers.put(AUTHORIZATION, BEARER + accessToken);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         validResponse(response, OK, INVOICE_DOWNLOAD_BY_KSEF);
 
         return new ApiResponse<>(
-                response.statusCode(),
-                response.headers(),
-                response.body()
+                response.statusCode,
+                response.headers,
+                response.body
         ).getData();
     }
 
@@ -903,7 +910,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(uri, invoiceQueryFilters, headers);
+        HttpResponseData response = post(uri, invoiceQueryFilters, headers);
 
         return getResponse(response, OK, INVOICE_QUERY_METADATA, QueryInvoiceMetadataResponse.class);
     }
@@ -924,7 +931,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(INVOICE_EXPORT_INIT.getUrl(), invoiceExportRequest, headers);
+        HttpResponseData response = post(INVOICE_EXPORT_INIT.getUrl(), invoiceExportRequest, headers);
 
         return getResponse(response, CREATED, INVOICE_EXPORT_INIT, InitAsyncInvoicesQueryResponse.class);
     }
@@ -950,7 +957,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, INVOICE_EXPORT_STATUS, InvoiceExportStatus.class);
     }
@@ -969,7 +976,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(GRANT_INVOICE_SUBJECT_PERMISSION.getUrl(), grantEntityPermissionsRequest, headers);
+        HttpResponseData response = post(GRANT_INVOICE_SUBJECT_PERMISSION.getUrl(), grantEntityPermissionsRequest, headers);
 
         return getResponse(response, ACCEPTED, GRANT_INVOICE_SUBJECT_PERMISSION, OperationResponse.class);
     }
@@ -991,7 +998,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, SESSION_STATUS, SessionStatusResponse.class);
     }
@@ -1017,7 +1024,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, SESSION_INVOICE_GET_BY_REFERENCE_NUMBER, SessionInvoiceStatusResponse.class);
     }
@@ -1043,14 +1050,14 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         validResponse(response, OK, SESSION_INVOICE_UPO_BY_INVOICE_REFERENCE);
 
         return new ApiResponse<>(
-                response.statusCode(),
-                response.headers(),
-                response.body()
+                response.statusCode,
+                response.headers,
+                response.body
         ).getData();
     }
 
@@ -1075,14 +1082,14 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         validResponse(response, OK, SESSION_INVOICE_UPO_BY_KSEF);
 
         return new ApiResponse<>(
-                response.statusCode(),
-                response.headers(),
-                response.body()
+                response.statusCode,
+                response.headers,
+                response.body
         ).getData();
     }
 
@@ -1114,14 +1121,14 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         validResponse(response, OK, SESSION_UPO);
 
         return new ApiResponse<>(
-                response.statusCode(),
-                response.headers(),
-                response.body())
+                response.statusCode,
+                response.headers,
+                response.body)
                 .getData();
     }
 
@@ -1154,7 +1161,7 @@ public class DefaultKsefClient implements KSeFClient {
             headers.put(CONTINUATION_TOKEN, continuationToken);
         }
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, SESSION_INVOICE, SessionInvoicesResponse.class);
     }
@@ -1188,7 +1195,7 @@ public class DefaultKsefClient implements KSeFClient {
             headers.put(CONTINUATION_TOKEN, continuationToken);
         }
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, SESSION_INVOICE_FAILED, SessionInvoicesResponse.class);
     }
@@ -1257,7 +1264,7 @@ public class DefaultKsefClient implements KSeFClient {
             headers.put(CONTINUATION_TOKEN, continuationToken);
         }
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
         return getResponse(response, OK, SESSION_LIST, SessionsQueryResponse.class);
     }
 
@@ -1286,7 +1293,7 @@ public class DefaultKsefClient implements KSeFClient {
             headers.put(CONTINUATION_TOKEN, continuationToken);
 
         }
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, SESSION_ACTIVE_SESSIONS, AuthenticationListResponse.class);
     }
@@ -1301,7 +1308,7 @@ public class DefaultKsefClient implements KSeFClient {
         Map<String, String> headers = new HashMap<>();
         headers.put(AUTHORIZATION, BEARER + accessToken);
 
-        HttpResponse<byte[]> response = delete(SESSION_REVOKE_CURRENT_SESSION.getUrl(), headers);
+        HttpResponseData response = delete(SESSION_REVOKE_CURRENT_SESSION.getUrl(), headers);
 
         validResponse(response, NO_CONTENT, SESSION_REVOKE_CURRENT_SESSION);
     }
@@ -1321,7 +1328,7 @@ public class DefaultKsefClient implements KSeFClient {
         Map<String, String> headers = new HashMap<>();
         headers.put(AUTHORIZATION, BEARER + accessToken);
 
-        HttpResponse<byte[]> response = delete(uri, headers);
+        HttpResponseData response = delete(uri, headers);
 
         validResponse(response, NO_CONTENT, SESSION_REVOKE_SESSION);
     }
@@ -1343,7 +1350,7 @@ public class DefaultKsefClient implements KSeFClient {
         Map<String, String> headers = new HashMap<>();
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, PEPPOL_QUERY, PeppolProvidersListResponse.class);
     }
@@ -1361,7 +1368,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, LIMIT_CONTEXT, GetContextLimitResponse.class);
     }
@@ -1381,7 +1388,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, LIMIT_SUBJECT_CERTIFICATE, GetSubjectLimitResponse.class);
     }
@@ -1400,7 +1407,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
 
         String url = LIMIT_CONTEXT_CHANGE_TEST.getUrl();
-        HttpResponse<byte[]> response = post(url, changeContextLimitRequest, headers);
+        HttpResponseData response = post(url, changeContextLimitRequest, headers);
 
         validResponse(response, OK, LIMIT_CONTEXT_CHANGE_TEST);
     }
@@ -1418,7 +1425,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
 
         String url = LIMIT_CONTEXT_SET_PRODUCTION.getUrl();
-        HttpResponse<byte[]> response = post(url, null, headers);
+        HttpResponseData response = post(url, null, headers);
 
         validResponse(response, OK, LIMIT_CONTEXT_SET_PRODUCTION);
     }
@@ -1437,7 +1444,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
 
         String url = LIMIT_SUBJECT_CERTIFICATE_CHANGE_TEST.getUrl();
-        HttpResponse<byte[]> response = post(url, changeSubjectCertificateLimitRequest, headers);
+        HttpResponseData response = post(url, changeSubjectCertificateLimitRequest, headers);
 
         validResponse(response, OK, LIMIT_SUBJECT_CERTIFICATE_CHANGE_TEST);
     }
@@ -1456,7 +1463,7 @@ public class DefaultKsefClient implements KSeFClient {
         Map<String, String> headers = new HashMap<>();
         headers.put(AUTHORIZATION, BEARER + accessToken);
 
-        HttpResponse<byte[]> response = delete(uri, headers);
+        HttpResponseData response = delete(uri, headers);
 
         validResponse(response, OK, LIMIT_CONTEXT_RESET_TEST);
     }
@@ -1472,7 +1479,7 @@ public class DefaultKsefClient implements KSeFClient {
         Map<String, String> headers = new HashMap<>();
         headers.put(AUTHORIZATION, BEARER + accessToken);
 
-        HttpResponse<byte[]> response = delete(uri, headers);
+        HttpResponseData response = delete(uri, headers);
 
         validResponse(response, OK, LIMIT_SUBJECT_CERTIFICATE_RESET_TEST);
     }
@@ -1489,7 +1496,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
 
         String url = TEST_SUBJECT_CREATE.getUrl();
-        HttpResponse<byte[]> response = post(url, testDataSubjectCreateRequest, headers);
+        HttpResponseData response = post(url, testDataSubjectCreateRequest, headers);
 
         validResponse(response, OK, TEST_SUBJECT_CREATE);
     }
@@ -1506,7 +1513,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
 
         String url = TEST_SUBJECT_DELETE.getUrl();
-        HttpResponse<byte[]> response = post(url, testDataSubjectRemoveRequest, headers);
+        HttpResponseData response = post(url, testDataSubjectRemoveRequest, headers);
 
         validResponse(response, OK, TEST_SUBJECT_DELETE);
     }
@@ -1523,7 +1530,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
 
         String url = TEST_PERSON_CREATE.getUrl();
-        HttpResponse<byte[]> response = post(url, testDataPersonCreateRequest, headers);
+        HttpResponseData response = post(url, testDataPersonCreateRequest, headers);
 
         validResponse(response, OK, TEST_PERSON_CREATE);
     }
@@ -1540,7 +1547,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
 
         String url = TEST_PERSON_DELETE.getUrl();
-        HttpResponse<byte[]> response = post(url, testDataPersonRemoveRequest, headers);
+        HttpResponseData response = post(url, testDataPersonRemoveRequest, headers);
 
         validResponse(response, OK, TEST_PERSON_DELETE);
     }
@@ -1559,7 +1566,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, GET_RATE_LIMIT, GetRateLimitResponse.class);
     }
@@ -1576,7 +1583,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
 
         String url = TEST_PERMISSION.getUrl();
-        HttpResponse<byte[]> response = post(url, testDataPermissionRequest, headers);
+        HttpResponseData response = post(url, testDataPermissionRequest, headers);
 
         validResponse(response, OK, TEST_PERMISSION);
     }
@@ -1593,7 +1600,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
 
         String url = TEST_PERMISSION_REVOKE.getUrl();
-        HttpResponse<byte[]> response = post(url, testDataPermissionRemoveRequest, headers);
+        HttpResponseData response = post(url, testDataPermissionRemoveRequest, headers);
 
         validResponse(response, OK, TEST_PERMISSION_REVOKE);
     }
@@ -1610,7 +1617,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
 
         String url = TEST_ATTACHMENT.getUrl();
-        HttpResponse<byte[]> response = post(url, testDataAttachmentRequest, headers);
+        HttpResponseData response = post(url, testDataAttachmentRequest, headers);
 
         validResponse(response, OK, TEST_ATTACHMENT);
     }
@@ -1627,7 +1634,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
 
         String url = TEST_ATTACHMENT_REVOKE.getUrl();
-        HttpResponse<byte[]> response = post(url, testDataAttachmentRemoveRequest, headers);
+        HttpResponseData response = post(url, testDataAttachmentRemoveRequest, headers);
 
         validResponse(response, OK, TEST_ATTACHMENT_REVOKE);
     }
@@ -1647,7 +1654,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(GRANT_PERSON_PERMISSION.getUrl(), grantPersonPermissionsRequest, headers);
+        HttpResponseData response = post(GRANT_PERSON_PERMISSION.getUrl(), grantPersonPermissionsRequest, headers);
 
         return getResponse(response, ACCEPTED, GRANT_PERSON_PERMISSION, OperationResponse.class);
     }
@@ -1667,7 +1674,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(GRANT_SUBUNIT_PERMISSION.getUrl(), subunitPermissionsGrantRequest, headers);
+        HttpResponseData response = post(GRANT_SUBUNIT_PERMISSION.getUrl(), subunitPermissionsGrantRequest, headers);
 
         return getResponse(response, ACCEPTED, GRANT_SUBUNIT_PERMISSION, OperationResponse.class);
     }
@@ -1689,7 +1696,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = delete(uri, headers);
+        HttpResponseData response = delete(uri, headers);
 
         return getResponse(response, ACCEPTED, PERMISSION_REVOKE_COMMON, OperationResponse.class);
     }
@@ -1711,7 +1718,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = delete(uri, headers);
+        HttpResponseData response = delete(uri, headers);
 
         return getResponse(response, ACCEPTED, PERMISSION_REVOKE_AUTHORIZATION, OperationResponse.class);
     }
@@ -1731,7 +1738,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(PERMISSION_ATTACHMENT_STATUS.getUrl(), headers);
+        HttpResponseData response = get(PERMISSION_ATTACHMENT_STATUS.getUrl(), headers);
 
         return getResponse(response, OK, PERMISSION_ATTACHMENT_STATUS, PermissionAttachmentStatusResponse.class);
     }
@@ -1750,7 +1757,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, APPLICATION_JSON);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = post(TOKEN_GENERATE.getUrl(), ksefTokenRequest, headers);
+        HttpResponseData response = post(TOKEN_GENERATE.getUrl(), ksefTokenRequest, headers);
 
         return getResponse(response, ACCEPTED, TOKEN_GENERATE, GenerateTokenResponse.class);
     }
@@ -1800,7 +1807,7 @@ public class DefaultKsefClient implements KSeFClient {
             headers.put(CONTINUATION_TOKEN, continuationToken);
 
         }
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, TOKEN_LIST, QueryTokensResponse.class);
     }
@@ -1821,7 +1828,7 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(AUTHORIZATION, BEARER + accessToken);
         headers.put(ACCEPT, APPLICATION_JSON);
 
-        HttpResponse<byte[]> response = get(uri, headers);
+        HttpResponseData response = get(uri, headers);
 
         return getResponse(response, OK, TOKEN_STATUS, AuthenticationToken.class);
     }
@@ -1841,7 +1848,7 @@ public class DefaultKsefClient implements KSeFClient {
         Map<String, String> headers = new HashMap<>();
         headers.put(AUTHORIZATION, BEARER + accessToken);
 
-        HttpResponse<byte[]> response = delete(uri, headers);
+        HttpResponseData response = delete(uri, headers);
 
         validResponse(response, NO_CONTENT, TOKEN_REVOKE);
     }
@@ -1861,125 +1868,121 @@ public class DefaultKsefClient implements KSeFClient {
         val url = SECURITY_PUBLIC_KEY_CERTIFICATE.getUrl();
 
         log.debug("Retrieving public key certificate from {}", url);
-        HttpResponse<byte[]> response = get(url, headers);
+        HttpResponseData response = get(url, headers);
 
         validResponse(response, OK, SECURITY_PUBLIC_KEY_CERTIFICATE);
 
         try {
             return new ApiResponse<>(
-                    response.statusCode(),
-                    response.headers(),
-                    response.body() == null ? null : objectMapper.readValue(response.body(), new TypeReference<List<PublicKeyCertificate>>() {
+                    response.statusCode,
+                    response.headers,
+                    response.body == null ? null : objectMapper.readValue(response.body, new TypeReference<List<PublicKeyCertificate>>() {
                     })).getData();
         } catch (IOException e) {
             throw new ApiException(e);
         }
     }
 
-    private HttpResponse<byte[]> get(String uri, Map<String, String> headers) {
-        HttpRequest request = buildRequest(uri, GET, null, headers);
-
-        return sendHttpRequest(request, HttpResponse.BodyHandlers.ofByteArray());
+    private HttpResponseData get(String uri, Map<String, String> headers) throws IOException {
+        HttpGet request = new HttpGet(buildUri(baseURl, suffixURl, uri));
+        setHeaders(request, headers);
+        setRequestConfig(request);
+        return executeRequest(request);
     }
 
-    private HttpResponse<byte[]> post(String uri, Object body, Map<String, String> headers) throws SystemKSeFSDKException {
+    private HttpResponseData post(String uri, Object body, Map<String, String> headers) throws SystemKSeFSDKException {
         try {
-            HttpRequest request = buildRequest(uri, POST, body, headers);
-
-            return sendHttpRequest(request, HttpResponse.BodyHandlers.ofByteArray());
+            HttpPost request = new HttpPost(buildUri(baseURl, suffixURl, uri));
+            setHeaders(request, headers);
+            setRequestConfig(request);
+            
+            if (body != null) {
+                byte[] bodyBytes;
+                if (body instanceof String) {
+                    bodyBytes = ((String) body).getBytes(StandardCharsets.UTF_8);
+                } else if (body instanceof byte[]) {
+                    bodyBytes = (byte[]) body;
+                } else {
+                    bodyBytes = objectMapper.writeValueAsBytes(body);
+                }
+                request.setEntity(new ByteArrayEntity(bodyBytes));
+            }
+            
+            return executeRequest(request);
         } catch (IOException e) {
             throw new SystemKSeFSDKException(e.getMessage(), e);
         }
     }
 
-    private HttpResponse<byte[]> delete(String uri, Map<String, String> headers) throws SystemKSeFSDKException {
-        HttpRequest request = buildRequest(uri, DELETE, null, headers);
-        return sendHttpRequest(request, HttpResponse.BodyHandlers.ofByteArray());
+    private HttpResponseData delete(String uri, Map<String, String> headers) throws SystemKSeFSDKException {
+        HttpDelete request = new HttpDelete(buildUri(baseURl, suffixURl, uri));
+        setHeaders(request, headers);
+        setRequestConfig(request);
+        return executeRequest(request);
     }
 
-    private HttpRequest buildRequest(String uri, String method, byte[] body, Map<String, String> additionalHeaders) {
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(buildUri(baseURl, suffixURl, uri))
-                .timeout(timeout);
-
-        defaultHeaders.forEach(builder::header);
-
-        additionalHeaders.forEach(builder::header);
-        switch (method.toUpperCase()) {
-            case GET:
-                builder.GET();
-                break;
-            case POST:
-                builder.POST(HttpRequest.BodyPublishers.ofByteArray(body));
-                break;
-            case PUT:
-                builder.PUT(HttpRequest.BodyPublishers.ofByteArray(body));
-                break;
-            case DELETE:
-                builder.DELETE();
-                break;
-            default:
-                builder.method(method, HttpRequest.BodyPublishers.ofByteArray(body));
+    private void setHeaders(HttpRequestBase request, Map<String, String> headers) {
+        for (Map.Entry<String, String> entry : defaultHeaders.entrySet()) {
+            request.setHeader(entry.getKey(), entry.getValue());
         }
-
-        return builder.build();
-    }
-
-    private HttpRequest buildRequest(String uri, String method, Object body, Map<String, String> additionalHeaders) throws JsonProcessingException {
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(buildUri(baseURl, suffixURl, uri))
-                .timeout(timeout);
-
-        defaultHeaders.forEach(builder::header);
-
-        additionalHeaders.forEach(builder::header);
-
-        if (body instanceof String) {
-            String stringBody = (String) body;
-            switch (method.toUpperCase()) {
-                case GET:
-                    builder.GET();
-                    break;
-                case POST:
-                    builder.POST(HttpRequest.BodyPublishers.ofString(stringBody));
-                    break;
-                case PUT:
-                    builder.PUT(HttpRequest.BodyPublishers.ofString(stringBody));
-                    break;
-                case DELETE:
-                    builder.DELETE();
-                    break;
-                default:
-                    builder.method(method, HttpRequest.BodyPublishers.ofString(stringBody));
-            }
-        } else {
-            switch (method.toUpperCase()) {
-                case GET:
-                    builder.GET();
-                    break;
-                case POST:
-                    builder.POST(body != null ?
-                            HttpRequest.BodyPublishers.ofByteArray(objectMapper.writeValueAsBytes(body)) :
-                            HttpRequest.BodyPublishers.noBody());
-                    break;
-                case PUT:
-                    builder.PUT(body != null ?
-                            HttpRequest.BodyPublishers.ofByteArray(objectMapper.writeValueAsBytes(body)) :
-                            HttpRequest.BodyPublishers.noBody());
-                    break;
-                case DELETE:
-                    builder.DELETE();
-                    break;
-                default:
-                    builder.method(method, body != null ?
-                            HttpRequest.BodyPublishers.ofByteArray(objectMapper.writeValueAsBytes(body)) :
-                            HttpRequest.BodyPublishers.noBody());
-            }
-
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            request.setHeader(entry.getKey(), entry.getValue());
         }
-
-        return builder.build();
     }
+
+    private void setRequestConfig(HttpRequestBase request) {
+        int timeoutMs = (int) timeout.toMillis();
+        RequestConfig config = RequestConfig.custom()
+                .setConnectTimeout(timeoutMs)
+                .setSocketTimeout(timeoutMs)
+                .setConnectionRequestTimeout(timeoutMs)
+                .build();
+        request.setConfig(config);
+    }
+
+    private HttpResponseData executeRequest(HttpRequestBase request) {
+        try {
+            CloseableHttpResponse response = apiClient.execute(request);
+            try {
+                int statusCode = response.getStatusLine().getStatusCode();
+                byte[] body = response.getEntity() != null ? 
+                        EntityUtils.toByteArray(response.getEntity()) : new byte[0];
+                
+                // Convert headers to our wrapper format
+                Map<String, List<String>> headersMap = new HashMap<>();
+                for (org.apache.http.Header header : response.getAllHeaders()) {
+                    List<String> values = headersMap.get(header.getName());
+                    if (values == null) {
+                        values = new ArrayList<>();
+                        headersMap.put(header.getName(), values);
+                    }
+                    values.add(header.getValue());
+                }
+                HttpHeadersWrapper headers = new HttpHeadersWrapper(headersMap);
+                
+                return new HttpResponseData(statusCode, headers, body);
+            } finally {
+                response.close();
+            }
+        } catch (IOException e) {
+            throw new SystemKSeFSDKException(e.getMessage(), e);
+        }
+    }
+
+    // Helper class to hold response data
+    private static class HttpResponseData {
+        final int statusCode;
+        final HttpHeadersWrapper headers;
+        final byte[] body;
+
+        HttpResponseData(int statusCode, HttpHeadersWrapper headers, byte[] body) {
+            this.statusCode = statusCode;
+            this.headers = headers;
+            this.body = body;
+        }
+    }
+
+
 
     /**
      * Wysyłka strumieniowa pojedyńczego partu
@@ -1997,20 +2000,24 @@ public class DefaultKsefClient implements KSeFClient {
         headers.put(CONTENT_TYPE, OCTET_STREAM);
         String url = responsePart.getUrl().toString().replace(baseURl, "");
 
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create(baseURl + url))
-                .timeout(timeout);
-
-        defaultHeaders.forEach(builder::header);
-        headers.forEach(builder::header);
-        responsePart.getHeaders().forEach(builder::header);
-
-        builder.PUT(HttpRequest.BodyPublishers.fromPublisher(HttpRequest.BodyPublishers.ofInputStream(() -> dataStream), part.getMetadata().getFileSize()));
-        HttpRequest request = builder.build();
-
-        HttpResponse<byte[]> responseResult = sendHttpRequest(request, HttpResponse.BodyHandlers.ofByteArray());
-        if (CREATED.getCode() != responseResult.statusCode()) {
-            errors.add("Error sends part " + responsePart.getOrdinalNumber() + ": " + responseResult.statusCode());
+        try {
+            HttpPut request = new HttpPut(URI.create(baseURl + url));
+            setHeaders(request, headers);
+            
+            // Add response part headers
+            for (Map.Entry<String, String> entry : responsePart.getHeaders().entrySet()) {
+                request.setHeader(entry.getKey(), entry.getValue());
+            }
+            
+            setRequestConfig(request);
+            request.setEntity(new InputStreamEntity(dataStream, part.getMetadata().getFileSize()));
+            
+            HttpResponseData responseResult = executeRequest(request);
+            if (CREATED.getCode() != responseResult.statusCode) {
+                errors.add("Error sends part " + responsePart.getOrdinalNumber() + ": " + responseResult.statusCode);
+            }
+        } catch (Exception e) {
+            errors.add("Error sends part " + responsePart.getOrdinalNumber() + ": " + e.getMessage());
         }
     }
 
@@ -2031,20 +2038,24 @@ public class DefaultKsefClient implements KSeFClient {
 
         String url = responsePart.getUrl().toString().replace(baseURl, "");
 
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create(baseURl + url))
-                .timeout(timeout);
-
-        defaultHeaders.forEach(builder::header);
-        responsePart.getHeaders().forEach(builder::header);
-
-        headers.forEach(builder::header);
-        builder.PUT(HttpRequest.BodyPublishers.ofByteArray(fileBytes));
-        HttpRequest request = builder.build();
-
-        HttpResponse<byte[]> responseResult = sendHttpRequest(request, HttpResponse.BodyHandlers.ofByteArray());
-        if (CREATED.getCode() != responseResult.statusCode()) {
-            errors.add("Error sends part " + responsePart.getOrdinalNumber() + ": " + responseResult.statusCode());
+        try {
+            HttpPut request = new HttpPut(URI.create(baseURl + url));
+            setHeaders(request, headers);
+            
+            // Add response part headers
+            for (Map.Entry<String, String> entry : responsePart.getHeaders().entrySet()) {
+                request.setHeader(entry.getKey(), entry.getValue());
+            }
+            
+            setRequestConfig(request);
+            request.setEntity(new ByteArrayEntity(fileBytes));
+            
+            HttpResponseData responseResult = executeRequest(request);
+            if (CREATED.getCode() != responseResult.statusCode) {
+                errors.add("Error sends part " + responsePart.getOrdinalNumber() + ": " + responseResult.statusCode);
+            }
+        } catch (Exception e) {
+            errors.add("Error sends part " + responsePart.getOrdinalNumber() + ": " + e.getMessage());
         }
     }
 
@@ -2058,67 +2069,57 @@ public class DefaultKsefClient implements KSeFClient {
     public byte[] downloadPackagePart(InvoicePackagePart part) {
         String url = part.getUrl().toString().replace(baseURl, "");
 
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create(baseURl + url))
-                .timeout(timeout);
-
-        defaultHeaders.forEach(builder::header);
-
-        builder.GET();
-        HttpRequest request = builder.build();
-
-        HttpResponse<byte[]> response = sendHttpRequest(request, HttpResponse.BodyHandlers.ofByteArray());
-
-        return new ApiResponse<>(
-                response.statusCode(),
-                response.headers(),
-                response.body()
-        ).getData();
-    }
-
-    protected HttpResponse<byte[]> sendHttpRequest(HttpRequest request, HttpResponse.BodyHandler<byte[]> bodyHandler) {
         try {
-            return apiClient.send(request, bodyHandler);
-        } catch (IOException | InterruptedException e) {
+            HttpGet request = new HttpGet(URI.create(baseURl + url));
+            setHeaders(request, new HashMap<>());
+            setRequestConfig(request);
+            
+            HttpResponseData response = executeRequest(request);
+            
+            return new ApiResponse<>(
+                    response.statusCode,
+                    response.headers,
+                    response.body
+            ).getData();
+        } catch (IOException e) {
             throw new SystemKSeFSDKException(e.getMessage(), e);
         }
     }
 
-
-    private <T> T getResponse(HttpResponse<byte[]> response,
+    private <T> T getResponse(HttpResponseData response,
                               HttpStatus expectedStatus,
                               Url operation,
                               Class<T> classType) throws ApiException {
         try {
             validResponse(response, expectedStatus, operation);
             return new ApiResponse<>(
-                    response.statusCode(),
-                    response.headers(),
-                    response.body() == null ? null : objectMapper.readValue(response.body(), classType))
+                    response.statusCode,
+                    response.headers,
+                    response.body == null ? null : objectMapper.readValue(response.body, classType))
                     .getData();
         } catch (IOException e) {
             throw new ApiException(e);
         }
     }
 
-    private void validResponse(HttpResponse<byte[]> response,
+    private void validResponse(HttpResponseData response,
                                HttpStatus expectedStatus,
                                Url operation) throws ApiException {
         try {
-            if (!isValidResponse(response, expectedStatus)) {
+            if (!isValidResponse(response.statusCode, expectedStatus)) {
                 ExceptionResponse exception = null;
 
-                String contentType = response.headers()
+                String contentType = response.headers
                         .firstValue(CONTENT_TYPE)
                         .orElse("")
                         .toLowerCase();
 
                 if (contentType.contains(APPLICATION_JSON)) {
-                    exception = response.body() == null ? null :
-                            objectMapper.readValue(response.body(), ExceptionResponse.class);
+                    exception = response.body == null ? null :
+                            objectMapper.readValue(response.body, ExceptionResponse.class);
                 }
-                String message = formatExceptionMessage(operation.getOperationId(), response.statusCode(), response.body());
-                throw new ApiException(response.statusCode(), message, response.headers(), exception);
+                String message = formatExceptionMessage(operation.getOperationId(), response.statusCode, response.body);
+                throw new ApiException(response.statusCode, message, response.headers, exception);
             }
         } catch (IOException e) {
             throw new ApiException(e);
