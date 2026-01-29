@@ -7,7 +7,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.Test;
 
 import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 
 import static org.junit.Assert.*;
 
