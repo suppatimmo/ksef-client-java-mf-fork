@@ -3,6 +3,7 @@ package pl.akmf.ksef.sdk.api;
 import org.apache.commons.lang3.StringUtils;
 import pl.akmf.ksef.sdk.api.http.HttpHeadersWrapper;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -30,9 +31,13 @@ public class HttpUtils {
                     url.append("&");
                 }
 
-                url.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8));
-                url.append("=");
-                url.append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
+                try {
+                    url.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8.name()));
+                    url.append("=");
+                    url.append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8.name()));
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e); // UTF-8 should always be supported
+                }
                 first = false;
 
             }
@@ -56,9 +61,13 @@ public class HttpUtils {
                     url.append("&");
                 }
 
-                url.append(URLEncoder.encode(keyValue.getKey(), StandardCharsets.UTF_8));
-                url.append("=");
-                url.append(URLEncoder.encode(keyValue.getValue(), StandardCharsets.UTF_8));
+                try {
+                    url.append(URLEncoder.encode(keyValue.getKey(), StandardCharsets.UTF_8.name()));
+                    url.append("=");
+                    url.append(URLEncoder.encode(keyValue.getValue(), StandardCharsets.UTF_8.name()));
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e); // UTF-8 should always be supported
+                }
                 first = false;
 
             }

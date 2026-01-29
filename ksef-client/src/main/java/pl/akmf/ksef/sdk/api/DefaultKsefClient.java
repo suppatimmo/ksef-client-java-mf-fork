@@ -1883,7 +1883,7 @@ public class DefaultKsefClient implements KSeFClient {
         }
     }
 
-    private HttpResponseData get(String uri, Map<String, String> headers) throws IOException {
+    private HttpResponseData get(String uri, Map<String, String> headers) {
         HttpGet request = new HttpGet(buildUri(baseURl, suffixURl, uri));
         setHeaders(request, headers);
         setRequestConfig(request);
@@ -2068,22 +2068,21 @@ public class DefaultKsefClient implements KSeFClient {
     @Override
     public byte[] downloadPackagePart(InvoicePackagePart part) {
         String url = part.getUrl().toString().replace(baseURl, "");
+        return downloadPackagePart(url);
+    }
 
-        try {
-            HttpGet request = new HttpGet(URI.create(baseURl + url));
-            setHeaders(request, new HashMap<>());
-            setRequestConfig(request);
-            
-            HttpResponseData response = executeRequest(request);
-            
-            return new ApiResponse<>(
-                    response.statusCode,
-                    response.headers,
-                    response.body
-            ).getData();
-        } catch (IOException e) {
-            throw new SystemKSeFSDKException(e.getMessage(), e);
-        }
+    protected byte[] downloadPackagePart(String url) {
+        HttpGet request = new HttpGet(URI.create(baseURl + url));
+        setHeaders(request, new HashMap<>());
+        setRequestConfig(request);
+        
+        HttpResponseData response = executeRequest(request);
+        
+        return new ApiResponse<>(
+                response.statusCode,
+                response.headers,
+                response.body
+        ).getData();
     }
 
     private <T> T getResponse(HttpResponseData response,

@@ -15,7 +15,8 @@ import pl.akmf.ksef.sdk.client.model.auth.AuthStatus;
 import pl.akmf.ksef.sdk.client.model.auth.ContextIdentifier;
 import pl.akmf.ksef.sdk.client.model.session.*;
 
-import java.net.http.HttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -23,7 +24,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ForkJoinPool;
 
 /**
  * @author Adrian Lapierre {@literal al@alapierre.io}
@@ -31,14 +31,14 @@ import java.util.concurrent.ForkJoinPool;
  */
 public class BatchHelperTest {
 
-    private HttpClient apiClient;
+    private CloseableHttpClient apiClient;
     private BatchHelper helper;
     private KSeFClient ksefClient;
     private CryptographyService cryptographyService;
 
     @Before
     public void setUp() {
-        apiClient = createHttpBuilder().build();
+        apiClient = createHttpClient();
         ExampleApiProperties exampleApiProperties = new ExampleApiProperties();
         ksefClient = new DefaultKsefClient(apiClient, exampleApiProperties);
         cryptographyService = new DefaultCryptographyService(ksefClient);
@@ -49,7 +49,11 @@ public class BatchHelperTest {
     @After
     public void tearDown() {
         if (apiClient != null) {
-            apiClient.close();
+            try {
+                apiClient.close();
+            } catch (Exception e) {
+                // ignore
+            }
         }
     }
 
@@ -147,12 +151,11 @@ public class BatchHelperTest {
         }
     }
 
-    public static HttpClient.Builder createHttpBuilder() {
-        return HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(5))
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .version(HttpClient.Version.HTTP_2)
-                .executor(ForkJoinPool.commonPool());
+    public static CloseableHttpClient createHttpClient() {
+        return HttpClients.custom()
+                .setMaxConnTotal(100)
+                .setMaxConnPerRoute(20)
+                .build();
     }
 
     protected String auth(String t, String n) throws Exception {

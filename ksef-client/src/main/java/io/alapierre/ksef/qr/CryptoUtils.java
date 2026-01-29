@@ -10,6 +10,7 @@ import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.openssl.jcajce.JceOpenSSLPKCS8DecryptorProviderBuilder;
 import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
+import org.bouncycastle.openssl.PEMDecryptorProvider;
 import org.bouncycastle.operator.InputDecryptorProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.pkcs.PKCS8EncryptedPrivateKeyInfo;
@@ -132,7 +133,7 @@ public final class CryptoUtils {
             } else if (obj instanceof PEMEncryptedKeyPair) {
                 PEMEncryptedKeyPair encKeyPair = (PEMEncryptedKeyPair) obj;
                 requirePassword(password, "PEM encrypted key pair");
-                InputDecryptorProvider decProv =
+                PEMDecryptorProvider decProv =
                         new JcePEMDecryptorProviderBuilder()
                                 .setProvider(BC)
                                 .build(password);

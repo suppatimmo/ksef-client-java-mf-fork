@@ -172,7 +172,7 @@ public class FilesUtil {
             byte[] buffer = new byte[8192];
 
             while ((entry = zis.getNextEntry()) != null) {
-                if (entry.getName().isBlank()) {
+                if (entry.getName() == null || entry.getName().trim().isEmpty()) {
                     continue;
                 }
 
@@ -182,7 +182,7 @@ public class FilesUtil {
                     baos.write(buffer, 0, bytesRead);
                 }
 
-                String content = baos.toString(StandardCharsets.UTF_8);
+                String content = baos.toString(StandardCharsets.UTF_8.name());
                 files.put(entry.getName(), content);
 
                 zis.closeEntry();
