@@ -12,7 +12,10 @@ import pl.akmf.ksef.sdk.api.services.DefaultCryptographyService;
 import pl.akmf.ksef.sdk.client.interfaces.CryptographyService;
 import pl.akmf.ksef.sdk.client.interfaces.KSeFClient;
 import pl.akmf.ksef.sdk.client.model.auth.AuthStatus;
+import pl.akmf.ksef.sdk.client.model.auth.AuthenticationChallengeResponse;
+import pl.akmf.ksef.sdk.client.model.auth.AuthOperationStatusResponse;
 import pl.akmf.ksef.sdk.client.model.auth.ContextIdentifier;
+import pl.akmf.ksef.sdk.client.model.auth.SignatureResponse;
 import pl.akmf.ksef.sdk.client.model.session.*;
 
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -166,7 +169,7 @@ public class BatchHelperTest {
                 t,
                 challenge.getTimestamp());
 
-        AuthenticationInitResponse a = ksefClient.authenticateByKSeFToken(
+        SignatureResponse a = ksefClient.authenticateByKSeFToken(
                 new AuthKsefTokenRequestBuilder()
                         .withChallenge(challenge.getChallenge())
                         .withContextIdentifier(new ContextIdentifier(ContextIdentifier.IdentifierType.NIP, n))
@@ -187,7 +190,7 @@ public class BatchHelperTest {
 
         } while (authStatus.getStatus().getCode() != 200);
 
-        val oauth = ksefClient.redeemToken(a.getAuthenticationToken().getToken());
+        AuthOperationStatusResponse oauth = ksefClient.redeemToken(a.getAuthenticationToken().getToken());
 
         return oauth.getAccessToken().getToken();
     }

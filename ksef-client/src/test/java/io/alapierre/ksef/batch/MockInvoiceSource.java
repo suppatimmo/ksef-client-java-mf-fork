@@ -4,6 +4,7 @@ import io.alapierre.ksef.batch.model.InvoiceItem;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDate;
