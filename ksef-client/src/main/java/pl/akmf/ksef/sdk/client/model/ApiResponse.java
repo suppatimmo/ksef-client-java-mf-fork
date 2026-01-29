@@ -1,17 +1,17 @@
 package pl.akmf.ksef.sdk.client.model;
 
-import java.net.http.HttpHeaders;
+import pl.akmf.ksef.sdk.api.http.HttpHeadersWrapper;
 
 public class ApiResponse<T> {
     private final int statusCode;
-    private final HttpHeaders headers;
+    private final HttpHeadersWrapper headers;
     private final T data;
 
     /**
      * @param statusCode The status code of HTTP response
      * @param headers    The headers of HTTP response
      */
-    public ApiResponse(int statusCode, HttpHeaders headers) {
+    public ApiResponse(int statusCode, HttpHeadersWrapper headers) {
         this(statusCode, headers, null);
     }
 
@@ -20,7 +20,7 @@ public class ApiResponse<T> {
      * @param headers    The headers of HTTP response
      * @param data       The object deserialized from response bod
      */
-    public ApiResponse(int statusCode, HttpHeaders headers, T data) {
+    public ApiResponse(int statusCode, HttpHeadersWrapper headers, T data) {
         this.statusCode = statusCode;
         this.headers = headers;
         this.data = data;
@@ -30,7 +30,7 @@ public class ApiResponse<T> {
         return statusCode;
     }
 
-    public HttpHeaders getHeaders() {
+    public HttpHeadersWrapper getHeaders() {
         return headers;
     }
 

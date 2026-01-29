@@ -15,6 +15,7 @@ import java.security.PrivateKey;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -83,7 +84,7 @@ public class KeysTest {
 
         @Override
         public Map<String, String> getDefaultHeaders() {
-            return Map.of();
+            return new HashMap<>();
         }
     }
 

@@ -6,6 +6,7 @@ import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.InputDecryptorProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
@@ -470,7 +471,7 @@ public class DefaultCryptographyService implements CryptographyService {
             }
             PKCS8EncryptedPrivateKeyInfo encryptedKeyPair = (PKCS8EncryptedPrivateKeyInfo) object;
 
-            var decryptorProvider = new JcePKCSPBEInputDecryptorProviderBuilder()
+            InputDecryptorProvider decryptorProvider = new JcePKCSPBEInputDecryptorProviderBuilder()
                     .setProvider(BC)
                     .build(password);
 

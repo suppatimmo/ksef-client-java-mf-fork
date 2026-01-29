@@ -1,10 +1,10 @@
 package pl.akmf.ksef.sdk.client.model;
 
-import java.net.http.HttpHeaders;
+import pl.akmf.ksef.sdk.api.http.HttpHeadersWrapper;
 
 public class ApiException extends Exception {
     private final int code;
-    private final transient HttpHeaders responseHeaders;
+    private final transient HttpHeadersWrapper responseHeaders;
     private final transient ExceptionResponse exceptionResponse;
 
     public ApiException(int code, String message) {
@@ -28,7 +28,7 @@ public class ApiException extends Exception {
         this.exceptionResponse = null;
     }
 
-    public ApiException(int code, String message, HttpHeaders responseHeaders, ExceptionResponse exceptionResponse) {
+    public ApiException(int code, String message, HttpHeadersWrapper responseHeaders, ExceptionResponse exceptionResponse) {
         super(message);
         this.code = code;
         this.exceptionResponse = exceptionResponse;
@@ -43,7 +43,7 @@ public class ApiException extends Exception {
         return exceptionResponse;
     }
 
-    public HttpHeaders getResponseHeaders() {
+    public HttpHeadersWrapper getResponseHeaders() {
         return responseHeaders;
     }
 }

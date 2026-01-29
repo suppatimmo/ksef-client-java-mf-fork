@@ -4,6 +4,7 @@ import io.alapierre.ksef.batch.model.InvoiceItem;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDate;
@@ -66,14 +67,24 @@ public class MockInvoiceSource implements InvoiceSource {
         }
 
         private String loadTemplate() {
+            InputStream in = null;
             try {
-                var in = Objects.requireNonNull(
+                in = Objects.requireNonNull(
                         MockInvoiceSource.class.getResourceAsStream(templatePath),
                         "Template not found on classpath: " + templatePath
                 );
-                return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                byte[] bytes = readAllBytes(in);
+                return new String(bytes, StandardCharsets.UTF_8);
             } catch (IOException e) {
                 throw new RuntimeException("Cannot read template: " + templatePath, e);
+            } finally {
+                if (in != null) {
+                    try {
+                        in.close();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
             }
         }
 
@@ -84,6 +95,16 @@ public class MockInvoiceSource implements InvoiceSource {
             } catch (Exception e) {
                 throw new RuntimeException("Cannot compute SHA-256 hash", e);
             }
+        }
+
+        private byte[] readAllBytes(InputStream in) throws IOException {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+            while ((bytesRead = in.read(buffer)) != -1) {
+                output.write(buffer, 0, bytesRead);
+            }
+            return output.toByteArray();
         }
     }
 
