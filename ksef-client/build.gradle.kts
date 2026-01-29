@@ -46,6 +46,11 @@ dependencies {
     api("eu.europa.ec.joinup.sd-dss:dss-utils-apache-commons:$xadesVersion")
 
     api("org.apache.commons:commons-lang3:$commonsLangsVersion")
+    
+    // Jackson for JSON - explicitly declare all Jackson dependencies
+    api("com.fasterxml.jackson.core:jackson-databind:$jsr310Version")
+    api("com.fasterxml.jackson.core:jackson-core:$jsr310Version")
+    api("com.fasterxml.jackson.core:jackson-annotations:$jsr310Version")
     api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jsr310Version")
 
     // Apache HttpClient for Java 8 compatibility
